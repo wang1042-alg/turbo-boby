@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beacon_English 课程安排系统</title>
+    <!-- 引入 Bootstrap -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <!-- 引入 Bootstrap Datepicker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-datepicker/dist/css/bootstrap-datepicker.min.css">
+    <link rel="stylesheet" href="../static/style.css">
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <!-- 🔹 添加 Logo -->
+        <div class="text-center mb-3">
+            <img src="../static/logo.png" alt="Beacon_English Logo" class="me-3" style="height: 100px;">
+        </div>
+        <h1 class="text-center mb-4">课程安排系统</h1>
+    
+
+        {% if error_message %}
+        <div class="alert alert-danger text-center" role="alert">
+            {{ error_message }}
+        </div>
+        {% endif %}
+
+
+        <!-- 表单部分 -->
+        <form method="POST" id="schedule-form" class="bg-white p-4 rounded shadow" {% if lesson_dates %}style="display: none;"{% endif %}>
+            <div class="mb-3">
+                <label class="form-label">📌 课程开始日期:</label>
+                <input type="text" class="form-control datepicker" name="start_date" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">📚 课程总课时数:</label>
+                <input type="number" name="total_lessons" class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">🔄 每周上课次数:</label>
+                <select name="weekly_frequency" class="form-select" required>
+                    <option value="1">每周 1 次</option>
+                    <option value="2">每周 2 次</option>
+                    <option value="3">每周 3 次</option>
+                    <option value="4">每周 4 次</option>
+                    <option value="5">每周 5 次</option>
+                    <option value="6">每周 6 次</option>
+                    <option value="7">每天</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">⏳ 每次课程时长（小时）:</label>
+                <select name="lesson_duration" class="form-select" required>
+                    <option value="0.5">0.5 小时</option>
+                    <option value="1">1 小时</option>
+                    <option value="1.5">1.5 小时</option>
+                    <option value="2">2 小时</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">👩‍🏫 教师可用时间段:</label>
+                <div class="row">
+                    <div class="col">
+                        <label>开始时间:</label>
+                        <input type="number" class="form-control" name="teacher_start" value="{{ teacher_start or 6 }}" min="0" max="23">
+                    </div>
+                    <div class="col">
+                        <label>结束时间:</label>
+                        <input type="number" class="form-control" name="teacher_end" value="{{ teacher_end or 21 }}" min="0" max="23">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">🎓 学生可用时间段:</label>
+                <div class="row">
+                    <div class="col">
+                        <label>开始时间:</label>
+                        <input type="number" class="form-control" name="student_start" value="{{ student_start or 8 }}" min="0" max="23">
+                    </div>
+                    <div class="col">
+                        <label>结束时间:</label>
+                        <input type="number" class="form-control" name="student_end" value="{{ student_end or 21 }}" min="0" max="23">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">🌎 适用地区:</label><br>
+                <div class="form-check form-check-inline">
+                    <input type="checkbox" name="selected_regions" value="上海" class="form-check-input">
+                    <label class="form-check-label">上海</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input type="checkbox" name="selected_regions" value="布里斯班" class="form-check-input">
+                    <label class="form-check-label">布里斯班</label>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">📊 生成课程表</button>
+        </form>
+
+        <!-- 课程安排信息（提交后显示） -->
+        {% if lesson_dates %}
+        <div id="result-section">
+            <div class="bg-white p-4 rounded shadow mt-4">
+                <h2 class="text-center">✅ 课程安排信息</h2>
+                <p><strong>📅 课程开始日期:</strong> {{ start_date }}</p>
+                <p><strong>📚 课程总课时数:</strong> {{ total_lessons }} 节课</p>
+                <p><strong>🔄 每周上课次数:</strong> {{ weekly_frequency }} 次</p>
+                <p><strong>⏳ 每次课程时长:</strong> {{ lesson_duration }} 小时</p>
+                <p><strong>🌎 适用地区:</strong> {{ ", ".join(selected_regions) }}</p>
+            </div>
+        
+            <!-- 课程时间表 -->
+            <h2 class="text-center mt-4">📅 课程时间表</h2>
+            <table class="table table-striped table-bordered">
+                <tr>
+                    <th>教师时间（渥太华）</th>
+                    {% if show_shanghai %}
+                    <th>学生时间（上海）</th>
+                    {% endif %}
+                    {% if show_brisbane %}
+                    <th>学生时间（布里斯班）</th>
+                    {% endif %}
+                </tr>
+                {% for i in range(lesson_dates|length) %}
+                <tr>
+                    <td>{{ lesson_dates[i].strftime('%Y-%m-%d %H:%M') }}</td>
+                    {% if show_shanghai %}
+                    <td>{{ lesson_shanghai[i] }}</td>
+                    {% endif %}
+                    {% if show_brisbane %}
+                    <td>{{ lesson_brisbane[i] }}</td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </table>
+
+            <!-- 重新选择按钮 -->
+            <button class="btn btn-secondary w-100 mt-3" onclick="resetForm()">🔄 重新选择</button>
+        </div>
+        {% endif %}
+
+    <!-- Bootstrap & Datepicker JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap-datepicker/dist/js/bootstrap-datepicker.min.js"></script>
+
+    <script>
+        function resetForm() {
+            document.getElementById("schedule-form").style.display = "block"; // 重新显示表单
+            document.getElementById("result-section").style.display = "none"; // 隐藏课程安排
+    
+            // 清空表单数据
+            document.querySelector('form').reset();
+        }
+
+        $(document).ready(function() {
+        $('.datepicker').datepicker({
+            format: 'yyyy-mm-dd',
+            autoclose: true,
+            todayHighlight: true
+        });
+    });
+    </script>
+    
+</body>
+</html>
