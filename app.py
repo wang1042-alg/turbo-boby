@@ -1,6 +1,12 @@
 from flask import Flask, render_template, request
 from datetime import datetime, timedelta
 import pytz
+import os
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))  # 读取 Render 传递的端口
+    app.run(host="0.0.0.0", port=port, debug=False)
+
 
 app = Flask(__name__)
 
